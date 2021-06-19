@@ -12,10 +12,14 @@
 #include "libfdr/jrb.h"
 #include "libfdr/dllist.h"
 
+#define DIRECT_GRAPH 1
+#define UNDIRECT_GRAPH 0
+
 typedef struct
 {
   JRB edges;
   JRB vertices;
+  int type;
 } Graph;
 
 typedef Dllist Queue;
@@ -48,12 +52,112 @@ void postvisit(int v, int *countClock, JRB post);
 int numStrongConnectComponent(Graph g);
 void DFS_Edge_Reverse(Graph gReverse, int numV, int *countClock, JRB post);
 int DFSForNumStrongConnect(Graph g, int numV, JRB post);
+Graph importFile(char *fileName, int typeGraph);
+void print2Dot(Graph g, char *fileName);
 
-Graph createGraph()
+Graph importFile(char *fileName, int typeGraph)
 {
+  Graph g;
+  int numV, numEgde, v1, v2;
+  double w;
+  FILE *f = fopen(fileName, "r");
+  if (f == NULL)
+  {
+    printf("Can't open file %s\n", fileName);
+    return;
+  }
+
+  fscanf(f, "%d%*c", &numV);
+  if (numV > 10000)
+  {
+    printf("Support Max Vertex: 10000!\n");
+    fclose(f);
+    return g;
+  }
+  if ((typeGraph != UNDIRECT_GRAPH) && (typeGraph != DIRECT_GRAPH))
+  {
+    printf("uncorrect type graph!\n");
+    fclose(f);
+    return g;
+  }
+
+  g = createGraph(typeGraph);
+  fscanf(f, "%d%*c", &numEgde);
+  while (!feof(f))
+  {
+    fscanf(f, "%d %d %lf%*c", &v1, &v2, &w);
+    addEdge(g, v1, v2, w);
+  }
+
+  return g;
+}
+
+void print2Dot(Graph g, char *fileName)
+{
+
+  JRB Node, tmp, ptr;
+  int v1, v2;
+  int numV = numVertex(g);
+  double w;
+
+  FILE *fp;
+  fp = fopen(fileName, "w");
+  if (g.type == DIRECT_GRAPH)
+    fprintf(fp, "digraph dothi\n{\n");
+  else
+    fprintf(fp, "graph dothi\n{\n");
+
+  // IN RA các đỉnh
+  jrb_traverse(Node, g.vertices)
+      fprintf(fp, "\t%d\n", jval_i(Node->key));
+
+  Graph printed;
+  if (g.type == UNDIRECT_GRAPH)
+  {
+    printed = createGraph(UNDIRECT_GRAPH);
+  }
+
+  //Vẽ các cạnh
+  jrb_traverse(Node, g.edges)
+  {
+    tmp = (JRB)jval_v(Node->val);
+    jrb_traverse(ptr, tmp)
+    {
+      v1 = jval_i(Node->key);
+      v2 = jval_i(ptr->key);
+      w = jval_d(ptr->val);
+      if (g.type == DIRECT_GRAPH)
+        fprintf(fp, "\t%d -> %d [label=\"%lf\"]\n", v1, v2, w);
+      else
+      {
+        //kiểm tra xem đã có cạnh v1 -- v2 trong graph printed hay chua
+        if (!hasEdge(printed, v1, v2))
+        {
+          // Thêm cạnh đã in vào graph printed
+          addEdge(printed, v1, v2, 0);
+          fprintf(fp, "\t%d -- %d [label=\"%lf\"]\n", v1, v2, w);
+        }
+      }
+    }
+  }
+  fprintf(fp, "}");
+
+  if (g.type == UNDIRECT_GRAPH)
+    dropGraph(printed);
+  fclose(fp);
+}
+
+Graph createGraph(int type)
+{
+  if ((type != DIRECT_GRAPH) && (type != UNDIRECT_GRAPH))
+  {
+    printf("Please write correct type graph!!!\n");
+    exit(0);
+  }
   Graph g;
   g.edges = make_jrb();
   g.vertices = make_jrb();
+  g.type = type;
   return g;
 }
 
@@ -99,6 +203,24 @@ void addEdge(Graph graph, int v1, int v2, double weight)
       tree = (JRB)jval_v(node->val);
     }
     jrb_insert_int(tree, v2, new_jval_d(weight));
+  }
+
+  if (graph.type == UNDIRECT_GRAPH)
+  {
+    if (getEdgeValue(graph, v2, v1) == INFINITIVE_VALUE)
+    {
+      node = jrb_find_int(graph.edges, v2);
+      if (node == NULL)
+      {
+        tree = make_jrb();
+        jrb_insert_int(graph.edges, v2, new_jval_v((JRB)tree));
+      }
+      else
+      {
+        tree = (JRB)jval_v(node->val);
+      }
+      jrb_insert_int(tree, v1, new_jval_d(weight));
+    }
   }
 }
 
@@ -352,9 +474,10 @@ void TSort(Graph g, int output[], int *n)
 
   if (numV == 0)
     return;
-  
-  if(!DAG(g)){
-    printf("Detected Cycle\n");  
+
+  if (!DAG(g))
+  {
+    printf("Detected Cycle\n");
     return;
   }
 
@@ -492,6 +615,11 @@ void BFS(Graph g, int start)
 // Thuật toán Prim chỉ áp dụng với đồ thị vô hướng liên thông
 void MST(Graph g)
 {
+  if (g.type != UNDIRECT_GRAPH)
+  {
+    printf("Only for undirect graph!!!\n");
+    return;
+  }
   // Đếm số đỉnh của đồ thị
   int numV = numVertex(g);
 
@@ -602,9 +730,11 @@ void MST(Graph g)
   fprintf(fp, "graph MST\n{\n");
 
   // printed đc dùng để in ra file .dot
-  Graph printed = createGraph();
+  Graph printed = createGraph(UNDIRECT_GRAPH);
   JRB Node, temp, ptr2;
   int v1, v2;
+
+  // IN RA các đỉnh
   jrb_traverse(Node, g.vertices)
       fprintf(fp, "\t%d\n", jval_i(Node->key));
 
@@ -615,9 +745,8 @@ void MST(Graph g)
     v2 = path[i + 1];
     w = getEdgeValue(g, v1, v2);
 
-    fprintf(fp, "\t%d -- %d [color=\"#ff0000\", label=\"%g\", penwidth=3]\n", v1, v2, w);
+    fprintf(fp, "\t%d -- %d [color=\"#ff0000\", label=\"%lf\", penwidth=3]\n", v1, v2, w);
     addEdge(printed, v1, v2, 0);
-    addEdge(printed, v2, v1, 0);
   }
 
   // In ra các cạnh còn lại
@@ -628,12 +757,15 @@ void MST(Graph g)
     {
       v1 = jval_i(Node->key);
       v2 = jval_i(ptr2->key);
-      if (!hasEdge(printed, v1, v2) && !hasEdge(printed, v1, v2))
+
+      // Kiểm tra xem đã có cạnh v1 -- v2 trong printed hay chưa (Kiểm tra xem đã in cạnh v1 -- v2 ra file .dot chưa)
+      if (!hasEdge(printed, v1, v2))
       {
         w = jval_d(ptr2->val);
+
+        // Thêm cạnh đã in vào graph printed
         addEdge(printed, v1, v2, 0);
-        addEdge(printed, v2, v1, 0);
-        fprintf(fp, "\t%d -- %d [label=\"%g\"]\n", v1, v2, w);
+        fprintf(fp, "\t%d -- %d [label=\"%lf\"]\n", v1, v2, w);
       }
     }
   }
@@ -650,7 +782,8 @@ void MST(Graph g)
 void Coloring(Graph g)
 {
   int m, n = 0, a, b, adj[500], nadj;
-  int i, *A, *B, j;
+  int i, *A, *B, j, v1, v2;
+  double w;
   JRB ptr, node, tmp;
   FILE *fp;
 
@@ -710,27 +843,54 @@ void Coloring(Graph g)
   }
 
   fp = fopen("dothitomau.dot", "w");
-  fprintf(fp, "digraph dothi\n{\n");
+  if (g.type == DIRECT_GRAPH)
+    fprintf(fp, "digraph dothi\n{\n");
+  else
+    fprintf(fp, "graph dothi\n{\n");
 
   //Tô màu các đỉnh
   for (i = 0; i < n; ++i)
-    fprintf(fp, "%d [fillcolor=\".%d .3 1.0\", style=filled];\n", i, B[i]);
+    fprintf(fp, "\t%d [fillcolor=\".%d .3 1.0\", style=filled];\n", i, B[i]);
+
+  Graph printed;
+  if (g.type == UNDIRECT_GRAPH)
+  {
+    printed = createGraph(UNDIRECT_GRAPH);
+  }
 
   //Vẽ các cạnh
   jrb_traverse(node, g.edges)
   {
     tmp = (JRB)jval_v(node->val);
     jrb_traverse(ptr, tmp)
-        fprintf(fp, "%d -> %d\n", jval_i(node->key), jval_i(ptr->key));
+    {
+      v1 = jval_i(node->key);
+      v2 = jval_i(ptr->key);
+      w = jval_d(ptr->val);
+      if (g.type == DIRECT_GRAPH)
+        fprintf(fp, "\t%d -> %d [label=\"%lf\"]\n", v1, v2, w);
+      else
+      {
+        //kiểm tra xem đã có cạnh v1 -- v2 trong graph printed hay chua
+        if (!hasEdge(printed, v1, v2))
+        {
+          // Thêm cạnh đã in vào graph printed
+          addEdge(printed, v1, v2, 0);
+          fprintf(fp, "\t%d -- %d [label=\"%lf\"]\n", v1, v2, w);
+        }
+      }
+    }
   }
   fprintf(fp, "}");
+
+  if (g.type == UNDIRECT_GRAPH)
+    dropGraph(printed);
 
   free(A);
   free(B);
   fclose(fp);
   return;
 }
-
 // Đếm số thành phần liên thông của đồ thị
 int numConnectedComponent(Graph g)
 {
@@ -783,7 +943,7 @@ int numConnectedComponent(Graph g)
 // Tạo đồ thị cạnh ngược từ đồ thị g
 Graph createGraphReverse(Graph g)
 {
-  Graph gReverse = createGraph();
+  Graph gReverse = createGraph(DIRECT_GRAPH);
   JRB node, temp, ptr;
   int v1, v2;
   double w;
@@ -948,7 +1108,7 @@ int numStrongConnectComponent(Graph g)
 
   if (numV == 0)
     return 0;
-  
+
   int countClock = 0, re = 0;
   JRB post = make_jrb();
 
