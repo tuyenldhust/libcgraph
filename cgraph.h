@@ -17,9 +17,9 @@
 
 typedef struct
 {
-  JRB edges;
-  JRB vertices;
-  int type;
+    JRB edges;
+    JRB vertices;
+    int type;
 } Graph;
 
 typedef Dllist Queue;
@@ -30,6 +30,7 @@ int numVertex(Graph g);
 void addVertex(Graph graph, int id, char *name);
 char *getVertex(Graph graph, int id);
 void addEdge(Graph graph, int v1, int v2, double weight);
+int hasEdge(Graph graph, int v1, int v2);
 double getEdgeValue(Graph graph, int v1, int v2);
 int indegree(Graph graph, int v, int *output);
 int outdegree(Graph graph, int v, int *output);
@@ -55,725 +56,734 @@ int DFSForNumStrongConnect(Graph g, int numV, JRB post);
 Graph importFile(char *fileName, int typeGraph);
 void print2Dot(Graph g, char *fileName);
 
+int main(int argc, char const *argv[])
+{
+    /* code */
+    return 0;
+}
+
+
 Graph importFile(char *fileName, int typeGraph)
 {
-  Graph g;
-  int numV, numEgde, v1, v2;
-  double w;
-  FILE *f = fopen(fileName, "r");
-  if (f == NULL)
-  {
-    printf("Can't open file %s\n", fileName);
-    return;
-  }
+    Graph g;
+    int numV, numEgde, v1, v2;
+    double w;
+    FILE *f = fopen(fileName, "r");
+    if (f == NULL)
+    {
+        printf("Can't open file %s\n", fileName);
+        return g;
+    }
 
-  fscanf(f, "%d%*c", &numV);
-  if (numV > 10000)
-  {
-    printf("Support Max Vertex: 10000!\n");
-    fclose(f);
+    fscanf(f, "%d%*c", &numV);
+    if (numV > 10000)
+    {
+        printf("Support Max Vertex: 10000!\n");
+        fclose(f);
+        return g;
+    }
+    if ((typeGraph != UNDIRECT_GRAPH) && (typeGraph != DIRECT_GRAPH))
+    {
+        printf("uncorrect type graph!\n");
+        fclose(f);
+        return g;
+    }
+
+    g = createGraph(typeGraph);
+    fscanf(f, "%d%*c", &numEgde);
+    while (!feof(f))
+    {
+        fscanf(f, "%d %d %lf%*c", &v1, &v2, &w);
+        addEdge(g, v1, v2, w);
+        addVertex(g, v1, "");
+        addVertex(g, v2, "");
+    }
+
     return g;
-  }
-  if ((typeGraph != UNDIRECT_GRAPH) && (typeGraph != DIRECT_GRAPH))
-  {
-    printf("uncorrect type graph!\n");
-    fclose(f);
-    return g;
-  }
-
-  g = createGraph(typeGraph);
-  fscanf(f, "%d%*c", &numEgde);
-  while (!feof(f))
-  {
-    fscanf(f, "%d %d %lf%*c", &v1, &v2, &w);
-    addEdge(g, v1, v2, w);
-  }
-
-  return g;
 }
 
 void print2Dot(Graph g, char *fileName)
 {
 
-  JRB Node, tmp, ptr;
-  int v1, v2;
-  int numV = numVertex(g);
-  double w;
+    JRB Node, tmp, ptr;
+    int v1, v2;
+    int numV = numVertex(g);
+    double w;
 
-  FILE *fp;
-  fp = fopen(fileName, "w");
-  if (g.type == DIRECT_GRAPH)
-    fprintf(fp, "digraph dothi\n{\n");
-  else
-    fprintf(fp, "graph dothi\n{\n");
+    FILE *fp;
+    fp = fopen(fileName, "w");
+    if (g.type == DIRECT_GRAPH)
+        fprintf(fp, "digraph dothi\n{\n");
+    else
+        fprintf(fp, "graph dothi\n{\n");
 
-  // IN RA các đỉnh
-  jrb_traverse(Node, g.vertices)
-      fprintf(fp, "\t%d\n", jval_i(Node->key));
+    // IN RA các đỉnh
+    jrb_traverse(Node, g.vertices)
+        fprintf(fp, "\t%d\n", jval_i(Node->key));
 
-  Graph printed;
-  if (g.type == UNDIRECT_GRAPH)
-  {
-    printed = createGraph(UNDIRECT_GRAPH);
-  }
-
-  //Vẽ các cạnh
-  jrb_traverse(Node, g.edges)
-  {
-    tmp = (JRB)jval_v(Node->val);
-    jrb_traverse(ptr, tmp)
+    Graph printed;
+    if (g.type == UNDIRECT_GRAPH)
     {
-      v1 = jval_i(Node->key);
-      v2 = jval_i(ptr->key);
-      w = jval_d(ptr->val);
-      if (g.type == DIRECT_GRAPH)
-        fprintf(fp, "\t%d -> %d [label=\"%lf\"]\n", v1, v2, w);
-      else
-      {
-        //kiểm tra xem đã có cạnh v1 -- v2 trong graph printed hay chua
-        if (!hasEdge(printed, v1, v2))
-        {
-          // Thêm cạnh đã in vào graph printed
-          addEdge(printed, v1, v2, 0);
-          fprintf(fp, "\t%d -- %d [label=\"%lf\"]\n", v1, v2, w);
-        }
-      }
+        printed = createGraph(UNDIRECT_GRAPH);
     }
-  }
-  fprintf(fp, "}");
 
-  if (g.type == UNDIRECT_GRAPH)
-    dropGraph(printed);
-  fclose(fp);
+    //Vẽ các cạnh
+    jrb_traverse(Node, g.edges)
+    {
+        tmp = (JRB)jval_v(Node->val);
+        jrb_traverse(ptr, tmp)
+        {
+            v1 = jval_i(Node->key);
+            v2 = jval_i(ptr->key);
+            w = jval_d(ptr->val);
+            if (g.type == DIRECT_GRAPH)
+                fprintf(fp, "\t%d -> %d [label=\"%lf\"]\n", v1, v2, w);
+            else
+            {
+                //kiểm tra xem đã có cạnh v1 -- v2 trong graph printed hay chua
+                if (!hasEdge(printed, v1, v2))
+                {
+                    // Thêm cạnh đã in vào graph printed
+                    addEdge(printed, v1, v2, 0);
+                    fprintf(fp, "\t%d -- %d [label=\"%lf\"]\n", v1, v2, w);
+                }
+            }
+        }
+    }
+    fprintf(fp, "}");
+
+    if (g.type == UNDIRECT_GRAPH)
+        dropGraph(printed);
+    fclose(fp);
 }
 
 Graph createGraph(int type)
 {
-  if ((type != DIRECT_GRAPH) && (type != UNDIRECT_GRAPH))
-  {
-    printf("Please write correct type graph!!!\n");
-    exit(0);
-  }
-  Graph g;
-  g.edges = make_jrb();
-  g.vertices = make_jrb();
-  g.type = type;
-  return g;
+    if ((type != DIRECT_GRAPH) && (type != UNDIRECT_GRAPH))
+    {
+        printf("Please write correct type graph!!!\n");
+        exit(0);
+    }
+    Graph g;
+    g.edges = make_jrb();
+    g.vertices = make_jrb();
+    g.type = type;
+    return g;
 }
 
 // Đếm số đỉnh của đò thị
 int numVertex(Graph g)
 {
-  int numV = 0;
-  JRB ptr;
-  jrb_traverse(ptr, g.vertices)
-      numV++;
-  return numV;
+    int numV = 0;
+    JRB ptr;
+    jrb_traverse(ptr, g.vertices)
+        numV++;
+    return numV;
 }
 
 void addVertex(Graph g, int id, char *name)
 {
-  JRB node = jrb_find_int(g.vertices, id);
-  if (node == NULL) // only add new vertex
-    jrb_insert_int(g.vertices, id, new_jval_s(strdup(name)));
+    JRB node = jrb_find_int(g.vertices, id);
+    if (node == NULL) // only add new vertex
+        jrb_insert_int(g.vertices, id, new_jval_s(strdup(name)));
 }
 
 char *getVertex(Graph g, int id)
 {
-  JRB node = jrb_find_int(g.vertices, id);
-  if (node == NULL)
-    return NULL;
-  else
-    return jval_s(node->val);
+    JRB node = jrb_find_int(g.vertices, id);
+    if (node == NULL)
+        return NULL;
+    else
+        return jval_s(node->val);
 }
 
 void addEdge(Graph graph, int v1, int v2, double weight)
 {
-  JRB node, tree;
-  if (getEdgeValue(graph, v1, v2) == INFINITIVE_VALUE)
-  {
-    node = jrb_find_int(graph.edges, v1);
-    if (node == NULL)
+    JRB node, tree;
+    if (getEdgeValue(graph, v1, v2) == INFINITIVE_VALUE)
     {
-      tree = make_jrb();
-      jrb_insert_int(graph.edges, v1, new_jval_v((JRB)tree));
+        node = jrb_find_int(graph.edges, v1);
+        if (node == NULL)
+        {
+            tree = make_jrb();
+            jrb_insert_int(graph.edges, v1, new_jval_v((JRB)tree));
+        }
+        else
+        {
+            tree = (JRB)jval_v(node->val);
+        }
+        jrb_insert_int(tree, v2, new_jval_d(weight));
     }
-    else
-    {
-      tree = (JRB)jval_v(node->val);
-    }
-    jrb_insert_int(tree, v2, new_jval_d(weight));
-  }
 
-  if (graph.type == UNDIRECT_GRAPH)
-  {
-    if (getEdgeValue(graph, v2, v1) == INFINITIVE_VALUE)
+    if (graph.type == UNDIRECT_GRAPH)
     {
-      node = jrb_find_int(graph.edges, v2);
-      if (node == NULL)
-      {
-        tree = make_jrb();
-        jrb_insert_int(graph.edges, v2, new_jval_v((JRB)tree));
-      }
-      else
-      {
-        tree = (JRB)jval_v(node->val);
-      }
-      jrb_insert_int(tree, v1, new_jval_d(weight));
+        if (getEdgeValue(graph, v2, v1) == INFINITIVE_VALUE)
+        {
+            node = jrb_find_int(graph.edges, v2);
+            if (node == NULL)
+            {
+                tree = make_jrb();
+                jrb_insert_int(graph.edges, v2, new_jval_v((JRB)tree));
+            }
+            else
+            {
+                tree = (JRB)jval_v(node->val);
+            }
+            jrb_insert_int(tree, v1, new_jval_d(weight));
+        }
     }
-  }
 }
 
 int hasEdge(Graph graph, int v1, int v2)
 {
-  JRB Node = jrb_find_int(graph.edges, v1);
-  if (Node != NULL)
-  {
-    JRB tmp = jrb_find_int((JRB)jval_v(Node->val), v2);
-    if (tmp != NULL)
+    JRB Node = jrb_find_int(graph.edges, v1);
+    if (Node != NULL)
     {
-      return 1;
+        JRB tmp = jrb_find_int((JRB)jval_v(Node->val), v2);
+        if (tmp != NULL)
+        {
+            return 1;
+        }
+        else
+        {
+            return 0;
+        }
     }
-    else
-    {
-      return 0;
-    }
-  }
 }
 
 double getEdgeValue(Graph graph, int v1, int v2)
 {
-  JRB node, tree;
-  node = jrb_find_int(graph.edges, v1);
-  if (node == NULL)
-    return INFINITIVE_VALUE;
-  tree = (JRB)jval_v(node->val);
-  node = jrb_find_int(tree, v2);
-  if (node == NULL)
-    return INFINITIVE_VALUE;
-  else
-    return jval_d(node->val);
+    JRB node, tree;
+    node = jrb_find_int(graph.edges, v1);
+    if (node == NULL)
+        return INFINITIVE_VALUE;
+    tree = (JRB)jval_v(node->val);
+    node = jrb_find_int(tree, v2);
+    if (node == NULL)
+        return INFINITIVE_VALUE;
+    else
+        return jval_d(node->val);
 }
 
 int indegree(Graph graph, int v, int *output)
 {
-  JRB tree, node;
-  int total = 0;
-  jrb_traverse(node, graph.edges)
-  {
-    tree = (JRB)jval_v(node->val);
-    if (jrb_find_int(tree, v))
+    JRB tree, node;
+    int total = 0;
+    jrb_traverse(node, graph.edges)
     {
-      output[total] = jval_i(node->key);
-      total++;
+        tree = (JRB)jval_v(node->val);
+        if (jrb_find_int(tree, v))
+        {
+            output[total] = jval_i(node->key);
+            total++;
+        }
     }
-  }
-  return total;
+    return total;
 }
 
 int outdegree(Graph graph, int v, int *output)
 {
-  JRB tree, node;
-  int total;
-  node = jrb_find_int(graph.edges, v);
-  if (node == NULL)
-    return 0;
-  tree = (JRB)jval_v(node->val);
-  total = 0;
-  jrb_traverse(node, tree)
-  {
-    output[total] = jval_i(node->key);
-    total++;
-  }
-  return total;
+    JRB tree, node;
+    int total;
+    node = jrb_find_int(graph.edges, v);
+    if (node == NULL)
+        return 0;
+    tree = (JRB)jval_v(node->val);
+    total = 0;
+    jrb_traverse(node, tree)
+    {
+        output[total] = jval_i(node->key);
+        total++;
+    }
+    return total;
 }
 
 // Dijkstra
 double shortestPath(Graph g, int s, int t, int *path, int *length)
 {
-  // Đếm số đỉnh của đồ thị
-  int numV = numVertex(g);
+    // Đếm số đỉnh của đồ thị
+    int numV = numVertex(g);
 
-  if (numV == 0)
-    return;
+    if (numV == 0)
+        return INFINITIVE_VALUE;
 
-  // isSelectMin dùng để xem đỉnh đó đã được chọn chưa (chọn min)
-  int *isSelectMin = (int *)calloc(numV, sizeof(int));
+    // isSelectMin dùng để xem đỉnh đó đã được chọn chưa (chọn min)
+    int *isSelectMin = (int *)calloc(numV, sizeof(int));
 
-  // beenInPQ dùng để kiểm tra xem đỉnh đó đã ở trong hàng đợi hay chưa
-  int *beenInPQ = (int *)calloc(numV, sizeof(int));
-  double distance[numV], min_dist, w, total;
-  int min, u;
-  int previous[numV], tmp[numV];
-  int n, output[numV], v;
-  Dllist ptr, queue, node;
+    // beenInPQ dùng để kiểm tra xem đỉnh đó đã ở trong hàng đợi hay chưa
+    int *beenInPQ = (int *)calloc(numV, sizeof(int));
+    double distance[numV], min_dist, w, total;
+    int min, u;
+    int previous[numV], tmp[numV];
+    int n, output[numV], v;
+    Dllist ptr, queue, node;
 
-  // Dijkstra algorithm
-  for (int i = 0; i < numV; i++)
-    distance[i] = INFINITIVE_VALUE;
-  distance[s] = 0;
-  previous[s] = s;
+    // Dijkstra algorithm
+    for (int i = 0; i < numV; i++)
+        distance[i] = INFINITIVE_VALUE;
+    distance[s] = 0;
+    previous[s] = s;
 
-  queue = new_dllist();
-  dll_append(queue, new_jval_i(s));
+    queue = new_dllist();
+    dll_append(queue, new_jval_i(s));
 
-  while (!dll_empty(queue))
-  {
-    // get u from the priority queue
-    min_dist = INFINITIVE_VALUE;
-    dll_traverse(ptr, queue)
+    while (!dll_empty(queue))
     {
-      u = jval_i(ptr->val);
-      if (min_dist > distance[u])
-      {
-        min_dist = distance[u];
-        min = u;
-        node = ptr;
-      }
-    }
-    dll_delete_node(node);
-    u = min;
-    beenInPQ[u] = 0;
-
-    if (u == t)
-      break;
-
-    isSelectMin[u] = 1;
-    n = outdegree(g, u, output);
-    for (int i = 0; i < n; i++)
-    {
-      v = output[i];
-      if (!isSelectMin[v])
-      {
-        w = getEdgeValue(g, u, v);
-        if (distance[v] > distance[u] + w)
+        // get u from the priority queue
+        min_dist = INFINITIVE_VALUE;
+        dll_traverse(ptr, queue)
         {
-          distance[v] = distance[u] + w;
-          previous[v] = u;
+            u = jval_i(ptr->val);
+            if (min_dist > distance[u])
+            {
+                min_dist = distance[u];
+                min = u;
+                node = ptr;
+            }
         }
-        if (!beenInPQ[v])
+        dll_delete_node(node);
+        u = min;
+        beenInPQ[u] = 0;
+
+        if (u == t)
+            break;
+
+        isSelectMin[u] = 1;
+        n = outdegree(g, u, output);
+        for (int i = 0; i < n; i++)
         {
-          dll_append(queue, new_jval_i(v));
-          beenInPQ[v] = 1;
+            v = output[i];
+            if (!isSelectMin[v])
+            {
+                w = getEdgeValue(g, u, v);
+                if (distance[v] > distance[u] + w)
+                {
+                    distance[v] = distance[u] + w;
+                    previous[v] = u;
+                }
+                if (!beenInPQ[v])
+                {
+                    dll_append(queue, new_jval_i(v));
+                    beenInPQ[v] = 1;
+                }
+            }
         }
-      }
     }
-  }
 
-  free(isSelectMin);
-  free(beenInPQ);
-  free(queue);
+    free(isSelectMin);
+    free(beenInPQ);
+    free(queue);
 
-  total = distance[t];
-  if (total != INFINITIVE_VALUE)
-  {
-    tmp[0] = t;
-    n = 1;
-    while (t != s)
+    total = distance[t];
+    if (total != INFINITIVE_VALUE)
     {
-      t = previous[t];
-      tmp[n++] = t;
+        tmp[0] = t;
+        n = 1;
+        while (t != s)
+        {
+            t = previous[t];
+            tmp[n++] = t;
+        }
+        for (int i = n - 1; i >= 0; i--)
+            path[n - i - 1] = tmp[i];
+        *length = n;
     }
-    for (int i = n - 1; i >= 0; i--)
-      path[n - i - 1] = tmp[i];
-    *length = n;
-  }
 
-  return total;
+    return total;
 }
 
 void Enqueue(Queue *q, Jval jval)
 {
-  dll_append(*q, jval);
+    dll_append(*q, jval);
 }
 
 int Dequeue(Queue *q)
 {
-  Queue tmp = dll_first(*q);
-  int v = jval_i(tmp->val);
-  dll_delete_node(tmp);
-  return v;
+    Queue tmp = dll_first(*q);
+    int v = jval_i(tmp->val);
+    dll_delete_node(tmp);
+    return v;
 }
 
 void Put(Stack *S, Jval jval)
 {
-  dll_append(*S, jval);
+    dll_append(*S, jval);
 }
 
 int Pop(Stack *S)
 {
-  Stack tmp = dll_last(*S);
-  int v = jval_i(tmp->val);
-  dll_delete_node(tmp);
-  return v;
+    Stack tmp = dll_last(*S);
+    int v = jval_i(tmp->val);
+    dll_delete_node(tmp);
+    return v;
 }
 
 int Top(Stack S)
 {
-  if (!dll_empty(S))
-  {
-    return jval_i(dll_first(S)->val);
-  }
-  else
-    return -1;
+    if (!dll_empty(S))
+    {
+        return jval_i(dll_first(S)->val);
+    }
+    else
+        return -1;
 }
 
 // Duyệt graph theo BFS nếu trong quá trình duyệt mà v == start có nghĩa đồ thị có chu trình trả vê là 0
 // Duyệt hết graph mà không thấy v == start thì trả về 1 (có nghĩa không có chu trình)
 int DAG(Graph graph)
 {
-  // Đếm số đỉnh của đồ thị
-  int numV = numVertex(graph);
+    // Đếm số đỉnh của đồ thị
+    int numV = numVertex(graph);
 
-  if (numV == 0)
-    return;
+    if (numV == 0)
+        return -1;
 
-  Queue q = new_dllist();
-  int visited[numV];
-  int u, v;
-  int output[numV];
-  int re, start;
-  JRB vertex;
+    Queue q = new_dllist();
+    int visited[numV];
+    int u, v;
+    int output[numV];
+    int re, start;
+    JRB vertex;
 
-  jrb_traverse(vertex, graph.vertices)
-  {
-    memset(visited, 0, sizeof(visited));
-    Enqueue(&q, vertex->key);
-    start = jval_i(vertex->key);
-
-    while (!dll_empty(q))
+    jrb_traverse(vertex, graph.vertices)
     {
-      u = Dequeue(&q);
-      if (!visited[u])
-      {
-        visited[u] = 1;
-        re = outdegree(graph, u, output);
-        for (int i = 0; i < re; i++)
+        memset(visited, 0, sizeof(visited));
+        Enqueue(&q, vertex->key);
+        start = jval_i(vertex->key);
+
+        while (!dll_empty(q))
         {
-          v = output[i];
-          if (v == start)
-          {
-            return 0;
-          }
-          if (visited[v] == 0)
-          {
-            Enqueue(&q, new_jval_i(v));
-          }
+            u = Dequeue(&q);
+            if (!visited[u])
+            {
+                visited[u] = 1;
+                re = outdegree(graph, u, output);
+                for (int i = 0; i < re; i++)
+                {
+                    v = output[i];
+                    if (v == start)
+                    {
+                        return 0;
+                    }
+                    if (visited[v] == 0)
+                    {
+                        Enqueue(&q, new_jval_i(v));
+                    }
+                }
+            }
         }
-      }
     }
-  }
-  return 1;
+    return 1;
 }
 
 // Sắp xếp Topo
 void TSort(Graph g, int output[], int *n)
 {
-  // Đếm số đỉnh của đồ thị
-  int numV = numVertex(g);
+    // Đếm số đỉnh của đồ thị
+    int numV = numVertex(g);
 
-  if (numV == 0)
-    return;
+    if (numV == 0)
+        return;
 
-  if (!DAG(g))
-  {
-    printf("Detected Cycle\n");
-    return;
-  }
-
-  Queue q = new_dllist();
-  *n = 0;
-  JRB tmp;
-  int v;
-  int out[numV];
-  int *indeg = (int *)calloc(numV, sizeof(int));
-  jrb_traverse(tmp, g.vertices)
-  {
-    indeg[jval_i(tmp->key)] += indegree(g, jval_i(tmp->key), out);
-    if (indeg[jval_i(tmp->key)] == 0)
+    if (!DAG(g))
     {
-      Enqueue(&q, tmp->key);
+        printf("Detected Cycle\n");
+        return;
     }
-  }
 
-  while (!dll_empty(q))
-  {
-    v = Dequeue(&q);
-    output[(*n)++] = v;
-    int k = outdegree(g, v, out);
-    for (int i = 0; i < k; i++)
+    Queue q = new_dllist();
+    *n = 0;
+    JRB tmp;
+    int v;
+    int out[numV];
+    int *indeg = (int *)calloc(numV, sizeof(int));
+    jrb_traverse(tmp, g.vertices)
     {
-      indeg[out[i]]--;
-      if (indeg[out[i]] == 0)
-        Enqueue(&q, new_jval_i(out[i]));
+        indeg[jval_i(tmp->key)] += indegree(g, jval_i(tmp->key), out);
+        if (indeg[jval_i(tmp->key)] == 0)
+        {
+            Enqueue(&q, tmp->key);
+        }
     }
-  }
 
-  free_dllist(q);
+    while (!dll_empty(q))
+    {
+        v = Dequeue(&q);
+        output[(*n)++] = v;
+        int k = outdegree(g, v, out);
+        for (int i = 0; i < k; i++)
+        {
+            indeg[out[i]]--;
+            if (indeg[out[i]] == 0)
+                Enqueue(&q, new_jval_i(out[i]));
+        }
+    }
 
-  free(indeg);
+    free_dllist(q);
+
+    free(indeg);
 }
 
 // DFS
 void DFS(Graph g, int start)
 {
-  // Đếm số đỉnh của đồ thị
-  int numV = numVertex(g);
+    // Đếm số đỉnh của đồ thị
+    int numV = numVertex(g);
 
-  if (numV == 0)
-    return;
+    if (numV == 0)
+        return;
 
-  Stack S = new_dllist();
-  int *visited = (int *)calloc(numV, sizeof(int));
-  int u;
-  int output[numV];
-  int n = 0;
+    Stack S = new_dllist();
+    int *visited = (int *)calloc(numV, sizeof(int));
+    int u;
+    int output[numV];
+    int n = 0;
 
-  // Kiểm tra đã thăm hết đỉnh chưa
-  for (int j = 0; j < numV; j++)
-  {
-    if (visited[j] == 0)
+    // Kiểm tra đã thăm hết đỉnh chưa
+    for (int j = 0; j < numV; j++)
     {
-
-      Put(&S, new_jval_i(start));
-
-      while (!dll_empty(S))
-      {
-        u = Pop(&S);
-        if (visited[u] == 0)
+        if (visited[j] == 0)
         {
-          printf("%d ", u);
-          visited[u] = 1;
-          n = outdegree(g, u, output);
 
-          for (int i = 0; i < n; i++)
-          {
-            int v = output[i];
-            if (visited[v] == 0)
+            Put(&S, new_jval_i(start));
+
+            while (!dll_empty(S))
             {
-              Put(&S, new_jval_i(v));
-            }
-          }
-        }
-      }
-    }
-  }
+                u = Pop(&S);
+                if (visited[u] == 0)
+                {
+                    printf("%d ", u);
+                    visited[u] = 1;
+                    n = outdegree(g, u, output);
 
-  free(visited);
-  free_dllist(S);
+                    for (int i = 0; i < n; i++)
+                    {
+                        int v = output[i];
+                        if (visited[v] == 0)
+                        {
+                            Put(&S, new_jval_i(v));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    free(visited);
+    free_dllist(S);
 }
 
 //BFS
 void BFS(Graph g, int start)
 {
-  // Đếm số đỉnh của đồ thị
-  int numV = numVertex(g);
+    // Đếm số đỉnh của đồ thị
+    int numV = numVertex(g);
 
-  if (numV == 0)
-    return;
+    if (numV == 0)
+        return;
 
-  Queue q = new_dllist();
-  int *visited = (int *)calloc(numV, sizeof(int));
-  int u;
-  int output[numV];
-  int n = 0;
+    Queue q = new_dllist();
+    int *visited = (int *)calloc(numV, sizeof(int));
+    int u;
+    int output[numV];
+    int n = 0;
 
-  // Dùng vòng lặp for kiểm tra xem đã visit hết đỉnh chưa
-  for (int j = 0; j < numV; j++)
-  {
-    if (visited[j] == 0)
+    // Dùng vòng lặp for kiểm tra xem đã visit hết đỉnh chưa
+    for (int j = 0; j < numV; j++)
     {
-      Enqueue(&q, new_jval_i(start));
-
-      while (!dll_empty(q))
-      {
-        u = Dequeue(&q);
-        if (visited[u] == 0)
+        if (visited[j] == 0)
         {
-          printf("%d ", u);
-          visited[u] = 1;
-          n = outdegree(g, u, output);
+            Enqueue(&q, new_jval_i(start));
 
-          for (int i = 0; i < n; i++)
-          {
-            int v = output[i];
-            if (visited[v] == 0)
+            while (!dll_empty(q))
             {
-              Enqueue(&q, new_jval_i(v));
-            }
-          }
-        }
-      }
-    }
-  }
+                u = Dequeue(&q);
+                if (visited[u] == 0)
+                {
+                    printf("%d ", u);
+                    visited[u] = 1;
+                    n = outdegree(g, u, output);
 
-  free(visited);
-  free_dllist(q);
+                    for (int i = 0; i < n; i++)
+                    {
+                        int v = output[i];
+                        if (visited[v] == 0)
+                        {
+                            Enqueue(&q, new_jval_i(v));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    free(visited);
+    free_dllist(q);
 }
 
 // Sử dụng thuật toán Prim
 // Thuật toán Prim chỉ áp dụng với đồ thị vô hướng liên thông
 void MST(Graph g)
 {
-  if (g.type != UNDIRECT_GRAPH)
-  {
-    printf("Only for undirect graph!!!\n");
-    return;
-  }
-  // Đếm số đỉnh của đồ thị
-  int numV = numVertex(g);
-
-  if (numV == 0)
-    return;
-
-  // Khai báo các biến cần thiết
-  int *visited = (int *)calloc(numV, sizeof(int));
-  double distance[numV], min_dist, w, lastID;
-  int min, u;
-  int tmp[numV], previous[numV], path[numV];
-  int n, output[numV], v, t;
-  Dllist ptr, queue, node;
-
-  // Khỏi tạo chi phí ban đầu đến các đỉnh là vô cùng
-  for (int i = 0; i < numV; i++)
-    distance[i] = INFINITIVE_VALUE;
-
-  // Chọn một đỉnh đâu tiên trong cây JRB làm đỉnh bắt đầu
-  int s = jval_i(jrb_first(g.edges)->key);
-
-  // Gán chi phí đến đỉnh s là 0
-  distance[s] = 0;
-
-  // Gán cha của s là s
-  previous[s] = s;
-
-  // Make queue
-  queue = new_dllist();
-
-  // Append s
-  dll_append(queue, new_jval_i(s));
-
-  while (!dll_empty(queue))
-  {
-    // get u from the priority queue
-    // Chọn đỉnh có chi phí nhỏ nhất
-    min_dist = INFINITIVE_VALUE;
-    dll_traverse(ptr, queue)
+    if (g.type != UNDIRECT_GRAPH)
     {
-      u = jval_i(ptr->val);
-      if (min_dist > distance[u])
-      {
-        min_dist = distance[u];
-        min = u;
-        node = ptr;
-      }
+        printf("Only for undirect graph!!!\n");
+        return;
     }
+    // Đếm số đỉnh của đồ thị
+    int numV = numVertex(g);
 
-    // Make empty queue
+    if (numV == 0)
+        return;
+
+    // Khai báo các biến cần thiết
+    int *visited = (int *)calloc(numV, sizeof(int));
+    double distance[numV], min_dist, w, lastID;
+    int min, u;
+    int tmp[numV], previous[numV], path[numV];
+    int n, output[numV], v, t;
+    Dllist ptr, queue, node;
+
+    // Khỏi tạo chi phí ban đầu đến các đỉnh là vô cùng
+    for (int i = 0; i < numV; i++)
+        distance[i] = INFINITIVE_VALUE;
+
+    // Chọn một đỉnh đâu tiên trong cây JRB làm đỉnh bắt đầu
+    int s = jval_i(jrb_first(g.edges)->key);
+
+    // Gán chi phí đến đỉnh s là 0
+    distance[s] = 0;
+
+    // Gán cha của s là s
+    previous[s] = s;
+
+    // Make queue
+    queue = new_dllist();
+
+    // Append s
+    dll_append(queue, new_jval_i(s));
+
     while (!dll_empty(queue))
-      dll_delete_node(dll_first(queue));
-
-    u = min;
-
-    // lastID dùng để lưu đỉnh cuối cùng thao tác
-    lastID = u;
-
-    // Đánh đấu là đã thăm (hay đã cho vào tập X)
-    visited[u] = 1;
-
-    // Lấy các đỉnh kề của đỉnh u vào mảng output
-    n = outdegree(g, u, output);
-
-    // Lặp qua các đỉnh kê của u
-    for (int i = 0; i < n; i++)
     {
-      // Lấy ra ID của đỉnh kề thứ i của u
-      v = output[i];
+        // get u from the priority queue
+        // Chọn đỉnh có chi phí nhỏ nhất
+        min_dist = INFINITIVE_VALUE;
+        dll_traverse(ptr, queue)
+        {
+            u = jval_i(ptr->val);
+            if (min_dist > distance[u])
+            {
+                min_dist = distance[u];
+                min = u;
+                node = ptr;
+            }
+        }
 
-      // Nếu chưa đưa vào tập X
-      if (!visited[v])
-      {
-        // Lấy giá trị cạnh u->v
-        w = getEdgeValue(g, u, v);
-        // Gán lại chi phí đường đi tư u -> v
-        distance[v] = w;
+        // Make empty queue
+        while (!dll_empty(queue))
+            dll_delete_node(dll_first(queue));
 
-        // Gán cha của v là u
-        previous[v] = u;
+        u = min;
 
-        // Thêm v vào hàng đợi
-        dll_append(queue, new_jval_i(v));
-      }
+        // lastID dùng để lưu đỉnh cuối cùng thao tác
+        lastID = u;
+
+        // Đánh đấu là đã thăm (hay đã cho vào tập X)
+        visited[u] = 1;
+
+        // Lấy các đỉnh kề của đỉnh u vào mảng output
+        n = outdegree(g, u, output);
+
+        // Lặp qua các đỉnh kê của u
+        for (int i = 0; i < n; i++)
+        {
+            // Lấy ra ID của đỉnh kề thứ i của u
+            v = output[i];
+
+            // Nếu chưa đưa vào tập X
+            if (!visited[v])
+            {
+                // Lấy giá trị cạnh u->v
+                w = getEdgeValue(g, u, v);
+                // Gán lại chi phí đường đi tư u -> v
+                distance[v] = w;
+
+                // Gán cha của v là u
+                previous[v] = u;
+
+                // Thêm v vào hàng đợi
+                dll_append(queue, new_jval_i(v));
+            }
+        }
     }
-  }
 
-  // Free
-  free(visited);
-  free(queue);
+    // Free
+    free(visited);
+    free(queue);
 
-  // Truy ngược lại previous để tìm MST
-  t = lastID;
-  tmp[0] = t;
-  n = 1;
-  while (t != s)
-  {
-    t = previous[t];
-    tmp[n++] = t;
-  }
-
-  // Chuyển cuối lên đâu
-  for (int i = n - 1; i >= 0; i--)
-    path[n - i - 1] = tmp[i];
-
-  // Export to dot file
-  FILE *fp = fopen("MST.dot", "w");
-  fprintf(fp, "graph MST\n{\n");
-
-  // printed đc dùng để in ra file .dot
-  Graph printed = createGraph(UNDIRECT_GRAPH);
-  JRB Node, temp, ptr2;
-  int v1, v2;
-
-  // IN RA các đỉnh
-  jrb_traverse(Node, g.vertices)
-      fprintf(fp, "\t%d\n", jval_i(Node->key));
-
-  // IN RA MST (Cây khung nhỏ nhất)
-  for (int i = 0; i < n - 1; i++)
-  {
-    v1 = path[i];
-    v2 = path[i + 1];
-    w = getEdgeValue(g, v1, v2);
-
-    fprintf(fp, "\t%d -- %d [color=\"#ff0000\", label=\"%lf\", penwidth=3]\n", v1, v2, w);
-    addEdge(printed, v1, v2, 0);
-  }
-
-  // In ra các cạnh còn lại
-  jrb_traverse(Node, g.edges)
-  {
-    temp = (JRB)jval_v(Node->val);
-    jrb_traverse(ptr2, temp)
+    // Truy ngược lại previous để tìm MST
+    t = lastID;
+    tmp[0] = t;
+    n = 1;
+    while (t != s)
     {
-      v1 = jval_i(Node->key);
-      v2 = jval_i(ptr2->key);
+        t = previous[t];
+        tmp[n++] = t;
+    }
 
-      // Kiểm tra xem đã có cạnh v1 -- v2 trong printed hay chưa (Kiểm tra xem đã in cạnh v1 -- v2 ra file .dot chưa)
-      if (!hasEdge(printed, v1, v2))
-      {
-        w = jval_d(ptr2->val);
+    // Chuyển cuối lên đâu
+    for (int i = n - 1; i >= 0; i--)
+        path[n - i - 1] = tmp[i];
 
-        // Thêm cạnh đã in vào graph printed
+    // Export to dot file
+    FILE *fp = fopen("MST.dot", "w");
+    fprintf(fp, "graph MST\n{\n");
+
+    // printed đc dùng để in ra file .dot
+    Graph printed = createGraph(UNDIRECT_GRAPH);
+    JRB Node, temp, ptr2;
+    int v1, v2;
+
+    // IN RA các đỉnh
+    jrb_traverse(Node, g.vertices)
+        fprintf(fp, "\t%d\n", jval_i(Node->key));
+
+    // IN RA MST (Cây khung nhỏ nhất)
+    for (int i = 0; i < n - 1; i++)
+    {
+        v1 = path[i];
+        v2 = path[i + 1];
+        w = getEdgeValue(g, v1, v2);
+
+        fprintf(fp, "\t%d -- %d [color=\"#ff0000\", label=\"%lf\", penwidth=3]\n", v1, v2, w);
         addEdge(printed, v1, v2, 0);
-        fprintf(fp, "\t%d -- %d [label=\"%lf\"]\n", v1, v2, w);
-      }
     }
-  }
 
-  fprintf(fp, "}");
-  fclose(fp);
+    // In ra các cạnh còn lại
+    jrb_traverse(Node, g.edges)
+    {
+        temp = (JRB)jval_v(Node->val);
+        jrb_traverse(ptr2, temp)
+        {
+            v1 = jval_i(Node->key);
+            v2 = jval_i(ptr2->key);
 
-  dropGraph(printed);
+            // Kiểm tra xem đã có cạnh v1 -- v2 trong printed hay chưa (Kiểm tra xem đã in cạnh v1 -- v2 ra file .dot chưa)
+            if (!hasEdge(printed, v1, v2))
+            {
+                w = jval_d(ptr2->val);
+
+                // Thêm cạnh đã in vào graph printed
+                addEdge(printed, v1, v2, 0);
+                fprintf(fp, "\t%d -- %d [label=\"%lf\"]\n", v1, v2, w);
+            }
+        }
+    }
+
+    fprintf(fp, "}");
+    fclose(fp);
+
+    dropGraph(printed);
 }
 
 //To mau do thi
@@ -781,359 +791,365 @@ void MST(Graph g)
 //Output: file .dot
 void Coloring(Graph g)
 {
-  int m, n = 0, a, b, adj[500], nadj;
-  int i, *A, *B, j, v1, v2;
-  double w;
-  JRB ptr, node, tmp;
-  FILE *fp;
+    int m, n = 0, a, b, adj[500], nadj;
+    int i = 0, *A, *B, *C, j, v1, v2;
+    double w;
+    JRB ptr, node, tmp;
+    FILE *fp;
 
-  //Đếm số đỉnh
-  jrb_traverse(ptr, g.vertices)
-      n++;
+    //Đếm số đỉnh
+    jrb_traverse(ptr, g.vertices)
+        n++;
 
-  A = (int *)calloc(n, sizeof(int));
-  B = (int *)malloc(n * sizeof(int));
+    printf("%d\n", n);
 
-  //Tìm số bậc của đỉnh, lưu vào A
-  for (i = 0; i < n; ++i)
-  {
-    nadj = outdegree(g, i, adj);
-    A[i] += nadj;
-    for (j = 0; j < nadj; ++j)
-      if (hasEdge(g, adj[j], i) == 1)
-        A[i]--;
-    A[i] += indegree(g, i, adj);
-  }
+    A = (int *)calloc(n, sizeof(int));
+    B = (int *)malloc(n * sizeof(int));
+    C = (int *)malloc(n * sizeof(int));
 
-  //Copy mảng A sang mảng B
-  for (i = 0; i < n; ++i)
-    B[i] = A[i];
+    jrb_traverse(ptr, g.vertices)
+        C[i++] = jval_i(ptr->key);
 
-  //Tìm thứ tự đỉnh xếp theo bậc từ cao đến thấp, lưu vào A
-  for (a = 0; a < n; ++a)
-  {
-    i = a;
-
-    //Tìm đỉnh bậc cao nhất
-    for (b = 0; b < n; b++)
-      if (B[b] > B[i])
-        i = b;
-
-    B[i] = 0;
-    A[a] = i;
-  }
-
-  B[A[0]] = 0; //Đỉnh đầu tiên có màu 0
-  a = 1;
-
-  //Tô màu các đỉnh còn lại
-  for (i = 1; i < n; ++i)
-  {
-    B[A[i]] = 0; //Màu mặc định = 0
-
-    for (b = 0; b < i; ++b)
-      if ((hasEdge(g, A[i], A[b]) || hasEdge(g, A[b], A[i])) && B[A[i]] == B[A[b]])
-      {
-        //Nếu 2 đỉnh của 1 cạnh có cùng màu
-        B[A[i]]++;
-        b = -1;
-        if (B[A[i]] == a)
-          a++;
-      }
-  }
-
-  fp = fopen("dothitomau.dot", "w");
-  if (g.type == DIRECT_GRAPH)
-    fprintf(fp, "digraph dothi\n{\n");
-  else
-    fprintf(fp, "graph dothi\n{\n");
-
-  //Tô màu các đỉnh
-  for (i = 0; i < n; ++i)
-    fprintf(fp, "\t%d [fillcolor=\".%d .3 1.0\", style=filled];\n", i, B[i]);
-
-  Graph printed;
-  if (g.type == UNDIRECT_GRAPH)
-  {
-    printed = createGraph(UNDIRECT_GRAPH);
-  }
-
-  //Vẽ các cạnh
-  jrb_traverse(node, g.edges)
-  {
-    tmp = (JRB)jval_v(node->val);
-    jrb_traverse(ptr, tmp)
+    //Tìm số bậc của đỉnh, lưu vào A
+    for (i = 0; i < n; ++i)
     {
-      v1 = jval_i(node->key);
-      v2 = jval_i(ptr->key);
-      w = jval_d(ptr->val);
-      if (g.type == DIRECT_GRAPH)
-        fprintf(fp, "\t%d -> %d [label=\"%lf\"]\n", v1, v2, w);
-      else
-      {
-        //kiểm tra xem đã có cạnh v1 -- v2 trong graph printed hay chua
-        if (!hasEdge(printed, v1, v2))
-        {
-          // Thêm cạnh đã in vào graph printed
-          addEdge(printed, v1, v2, 0);
-          fprintf(fp, "\t%d -- %d [label=\"%lf\"]\n", v1, v2, w);
-        }
-      }
+        nadj = outdegree(g, i, adj);
+        A[i] += nadj;
+        for (j = 0; j < nadj; ++j)
+            if (hasEdge(g, adj[j], i) == 1)
+                A[i]--;
+        A[i] += indegree(g, i, adj);
     }
-  }
-  fprintf(fp, "}");
 
-  if (g.type == UNDIRECT_GRAPH)
-    dropGraph(printed);
+    //Copy mảng A sang mảng B
+    for (i = 0; i < n; ++i)
+        B[i] = A[i];
 
-  free(A);
-  free(B);
-  fclose(fp);
-  return;
+    //Tìm thứ tự đỉnh xếp theo bậc từ cao đến thấp, lưu vào A
+    for (a = 0; a < n; ++a)
+    {
+        i = a;
+
+        //Tìm đỉnh bậc cao nhất
+        for (b = 0; b < n; b++)
+            if (B[b] > B[i])
+                i = b;
+
+        B[i] = 0;
+        A[a] = i;
+    }
+
+    B[A[0]] = 0; //Đỉnh đầu tiên có màu 0
+    a = 1;
+
+    //Tô màu các đỉnh còn lại
+    for (i = 1; i < n; ++i)
+    {
+        B[A[i]] = 0; //Màu mặc định = 0
+
+        for (b = 0; b < i; ++b)
+            if ((hasEdge(g, A[i], A[b]) || hasEdge(g, A[b], A[i])) && B[A[i]] == B[A[b]])
+            {
+                //Nếu 2 đỉnh của 1 cạnh có cùng màu
+                B[A[i]]++;
+                b = -1;
+                if (B[A[i]] == a)
+                    a++;
+            }
+    }
+
+    fp = fopen("dothitomau.dot", "w");
+    if (g.type == DIRECT_GRAPH)
+        fprintf(fp, "digraph dothi\n{\n");
+    else
+        fprintf(fp, "graph dothi\n{\n");
+
+    //Tô màu các đỉnh
+    for (i = 0; i < n; ++i)
+        fprintf(fp, "\t%d [fillcolor=\".%d .3 1.0\", style=filled];\n", C[i], B[i]);
+
+    Graph printed;
+    if (g.type == UNDIRECT_GRAPH)
+    {
+        printed = createGraph(UNDIRECT_GRAPH);
+    }
+
+    //Vẽ các cạnh
+    jrb_traverse(node, g.edges)
+    {
+        tmp = (JRB)jval_v(node->val);
+        jrb_traverse(ptr, tmp)
+        {
+            v1 = jval_i(node->key);
+            v2 = jval_i(ptr->key);
+            w = jval_d(ptr->val);
+            if (g.type == DIRECT_GRAPH)
+                fprintf(fp, "\t%d -> %d [label=\"%g\"]\n", v1, v2, w);
+            else
+            {
+                //kiểm tra xem đã có cạnh v1 -- v2 trong graph printed hay chua
+                if (!hasEdge(printed, v1, v2))
+                {
+                    // Thêm cạnh đã in vào graph printed
+                    addEdge(printed, v1, v2, 0);
+                    fprintf(fp, "\t%d -- %d [label=\"%g\"]\n", v1, v2, w);
+                }
+            }
+        }
+    }
+    fprintf(fp, "}");
+
+    if (g.type == UNDIRECT_GRAPH)
+        dropGraph(printed);
+
+    free(A);
+    free(B);
+    fclose(fp);
+    return;
 }
 // Đếm số thành phần liên thông của đồ thị
 int numConnectedComponent(Graph g)
 {
-  // Đếm số đỉnh của đồ thị
-  int numV = numVertex(g);
+    // Đếm số đỉnh của đồ thị
+    int numV = numVertex(g);
 
-  if (numV == 0)
-    return 0;
+    if (numV == 0)
+        return 0;
 
-  Stack S = new_dllist();
-  int *visited = (int *)calloc(numV, sizeof(int));
-  int u, v;
-  int adj[numV];
-  int nFind = 0;
-  int cc = 0;
+    Stack S = new_dllist();
+    int *visited = (int *)calloc(numV, sizeof(int));
+    int u, v;
+    int adj[numV];
+    int nFind = 0;
+    int cc = 0;
 
-  for (int j = 0; j < numV; j++)
-  {
-    if (visited[j] == 0)
+    for (int j = 0; j < numV; j++)
     {
-      cc = cc + 1;
-      Put(&S, new_jval_i(j));
-
-      while (!dll_empty(S))
-      {
-        u = Pop(&S);
-        if (visited[u] == 0)
+        if (visited[j] == 0)
         {
-          visited[u] = 1;
-          nFind = outdegree(g, u, adj);
-          for (int i = 0; i < nFind; i++)
-          {
-            v = adj[i];
-            if (visited[v] == 0)
+            cc = cc + 1;
+            Put(&S, new_jval_i(j));
+
+            while (!dll_empty(S))
             {
-              Put(&S, new_jval_i(v));
+                u = Pop(&S);
+                if (visited[u] == 0)
+                {
+                    visited[u] = 1;
+                    nFind = outdegree(g, u, adj);
+                    for (int i = 0; i < nFind; i++)
+                    {
+                        v = adj[i];
+                        if (visited[v] == 0)
+                        {
+                            Put(&S, new_jval_i(v));
+                        }
+                    }
+                }
             }
-          }
         }
-      }
     }
-  }
 
-  free(visited);
-  free_dllist(S);
+    free(visited);
+    free_dllist(S);
 
-  return cc;
+    return cc;
 }
 
 // Tạo đồ thị cạnh ngược từ đồ thị g
 Graph createGraphReverse(Graph g)
 {
-  Graph gReverse = createGraph(DIRECT_GRAPH);
-  JRB node, temp, ptr;
-  int v1, v2;
-  double w;
+    Graph gReverse = createGraph(DIRECT_GRAPH);
+    JRB node, temp, ptr;
+    int v1, v2;
+    double w;
 
-  jrb_traverse(node, g.edges)
-  {
-    temp = (JRB)jval_v(node->val);
-    jrb_traverse(ptr, temp)
+    jrb_traverse(node, g.edges)
     {
-      v1 = jval_i(node->key);
-      v2 = jval_i(ptr->key);
-      w = jval_d(ptr->val);
-      addEdge(gReverse, v2, v1, w);
+        temp = (JRB)jval_v(node->val);
+        jrb_traverse(ptr, temp)
+        {
+            v1 = jval_i(node->key);
+            v2 = jval_i(ptr->key);
+            w = jval_d(ptr->val);
+            addEdge(gReverse, v2, v1, w);
+        }
     }
-  }
 
-  return gReverse;
+    return gReverse;
 }
 
 void previsit(int v, int *countClock)
 {
-  /* preArr[v] =  */ ++(*countClock);
+    /* preArr[v] =  */ ++(*countClock);
 }
 
 void postvisit(int v, int *countClock, JRB post)
 {
-  (*countClock)++;
-  jrb_insert_int(post, *countClock, new_jval_i(v));
-  // postArr[v] = clock;
+    (*countClock)++;
+    jrb_insert_int(post, *countClock, new_jval_i(v));
+    // postArr[v] = clock;
 }
 
 // DFS trên đồ thị ngược
 void DFS_Edge_Reverse(Graph gReverse, int numV, int *countClock, JRB post)
 {
-  Stack S = new_dllist();
-  int *visited = (int *)calloc(numV, sizeof(int));
-  int *isInStack = (int *)calloc(numV, sizeof(int));
-  int u, v;
-  int adj[numV];
-  int nFind = 0;
+    Stack S = new_dllist();
+    int *visited = (int *)calloc(numV, sizeof(int));
+    int *isInStack = (int *)calloc(numV, sizeof(int));
+    int u, v;
+    int adj[numV];
+    int nFind = 0;
 
-  for (int j = 0; j < numV; j++)
-  {
-    if (visited[j] == 0)
+    for (int j = 0; j < numV; j++)
     {
-      Put(&S, new_jval_i(j));
-      isInStack[j] = 1;
-
-      while (!dll_empty(S))
-      {
-        u = Top(S);
-        if (visited[u] == 1)
+        if (visited[j] == 0)
         {
-          int available = 0;
-          nFind = outdegree(gReverse, u, adj);
+            Put(&S, new_jval_i(j));
+            isInStack[j] = 1;
 
-          for (int i = 0; i < nFind; i++)
-          {
-            v = adj[i];
-            if (visited[v] == 0 && isInStack[v] == 0)
+            while (!dll_empty(S))
             {
-              Put(&S, new_jval_i(v));
-              isInStack[v] = 1;
-              available = 1;
-              break;
-            }
-          }
-          if (available == 0)
-          {
-            // printf("%d\n", u);
-            postvisit(u, countClock, post);
-            // printf("%d\n", clock);
-            Pop(&S);
-          }
-        }
-        else
-        {
-          visited[u] = 1;
-          // printf("%d\n", u);
+                u = Top(S);
+                if (visited[u] == 1)
+                {
+                    int available = 0;
+                    nFind = outdegree(gReverse, u, adj);
 
-          previsit(u, countClock);
-          // printf("%d\n", clock);
-          nFind = outdegree(gReverse, u, adj);
+                    for (int i = 0; i < nFind; i++)
+                    {
+                        v = adj[i];
+                        if (visited[v] == 0 && isInStack[v] == 0)
+                        {
+                            Put(&S, new_jval_i(v));
+                            isInStack[v] = 1;
+                            available = 1;
+                            break;
+                        }
+                    }
+                    if (available == 0)
+                    {
+                        // printf("%d\n", u);
+                        postvisit(u, countClock, post);
+                        // printf("%d\n", clock);
+                        Pop(&S);
+                    }
+                }
+                else
+                {
+                    visited[u] = 1;
+                    // printf("%d\n", u);
 
-          for (int i = 0; i < nFind; i++)
-          {
-            v = adj[i];
-            if (visited[v] == 0 && isInStack[v] == 0)
-            {
-              Put(&S, new_jval_i(v));
-              isInStack[v] = 1;
-              break;
+                    previsit(u, countClock);
+                    // printf("%d\n", clock);
+                    nFind = outdegree(gReverse, u, adj);
+
+                    for (int i = 0; i < nFind; i++)
+                    {
+                        v = adj[i];
+                        if (visited[v] == 0 && isInStack[v] == 0)
+                        {
+                            Put(&S, new_jval_i(v));
+                            isInStack[v] = 1;
+                            break;
+                        }
+                    }
+                }
             }
-          }
+            // printf("------------------\n");
         }
-      }
-      // printf("------------------\n");
     }
-  }
 
-  // printf("PostLast: %d\n", clock);
+    // printf("PostLast: %d\n", clock);
 
-  free(visited);
-  free(isInStack);
-  free_dllist(S);
+    free(visited);
+    free(isInStack);
+    free_dllist(S);
 }
 
 // DFS trên đồ thị g
 int DFSForNumStrongConnect(Graph g, int numV, JRB post)
 {
-  Stack S = new_dllist();
-  int *visited = (int *)calloc(numV, sizeof(int));
-  int u, v;
-  int adj[numV];
-  int nFind = 0;
-  int cc = 0;
-  JRB tmp;
+    Stack S = new_dllist();
+    int *visited = (int *)calloc(numV, sizeof(int));
+    int u, v;
+    int adj[numV];
+    int nFind = 0;
+    int cc = 0;
+    JRB tmp;
 
-  jrb_rtraverse(tmp, post)
-  {
-    // printf("%d\n", key);
-    int j = jval_i(tmp->val);
-    if (visited[j] == 0)
+    jrb_rtraverse(tmp, post)
     {
-      cc = cc + 1;
-      Put(&S, new_jval_i(j));
-
-      while (!dll_empty(S))
-      {
-        u = Pop(&S);
-        if (visited[u] == 0)
+        // printf("%d\n", key);
+        int j = jval_i(tmp->val);
+        if (visited[j] == 0)
         {
-          visited[u] = 1;
-          // printf("%d\n", u);
-          nFind = outdegree(g, u, adj);
+            cc = cc + 1;
+            Put(&S, new_jval_i(j));
 
-          for (int i = 0; i < nFind; i++)
-          {
-            v = adj[i];
-            if (visited[v] == 0)
+            while (!dll_empty(S))
             {
-              Put(&S, new_jval_i(v));
+                u = Pop(&S);
+                if (visited[u] == 0)
+                {
+                    visited[u] = 1;
+                    // printf("%d\n", u);
+                    nFind = outdegree(g, u, adj);
+
+                    for (int i = 0; i < nFind; i++)
+                    {
+                        v = adj[i];
+                        if (visited[v] == 0)
+                        {
+                            Put(&S, new_jval_i(v));
+                        }
+                    }
+                }
             }
-          }
+            // printf("------------------\n");
         }
-      }
-      // printf("------------------\n");
     }
-  }
 
-  free(visited);
-  free_dllist(S);
+    free(visited);
+    free_dllist(S);
 
-  return cc;
+    return cc;
 }
 
 // Số thành phần liên thông mạnh
 int numStrongConnectComponent(Graph g)
 {
-  // Đếm số đỉnh của đồ thị
-  int numV = numVertex(g);
+    // Đếm số đỉnh của đồ thị
+    int numV = numVertex(g);
 
-  if (numV == 0)
-    return 0;
+    if (numV == 0)
+        return 0;
 
-  int countClock = 0, re = 0;
-  JRB post = make_jrb();
+    int countClock = 0, re = 0;
+    JRB post = make_jrb();
 
-  Graph gReverse = createGraphReverse(g);
+    Graph gReverse = createGraphReverse(g);
 
-  DFS_Edge_Reverse(gReverse, numV, &countClock, post);
-  re = DFSForNumStrongConnect(g, numV, post);
+    DFS_Edge_Reverse(gReverse, numV, &countClock, post);
+    re = DFSForNumStrongConnect(g, numV, post);
 
-  dropGraph(gReverse);
-  jrb_free_tree(post);
+    dropGraph(gReverse);
+    jrb_free_tree(post);
 
-  return re;
+    return re;
 }
 
 void dropGraph(Graph graph)
 {
-  JRB node, tree;
-  jrb_traverse(node, graph.edges)
-  {
-    tree = (JRB)jval_v(node->val);
-    jrb_free_tree(tree);
-  }
+    JRB node, tree;
+    jrb_traverse(node, graph.edges)
+    {
+        tree = (JRB)jval_v(node->val);
+        jrb_free_tree(tree);
+    }
 
-  jrb_free_tree(graph.edges);
-  jrb_free_tree(graph.vertices);
+    jrb_free_tree(graph.edges);
+    jrb_free_tree(graph.vertices);
 }
 
 #endif
