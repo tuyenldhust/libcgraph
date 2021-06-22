@@ -56,13 +56,6 @@ int DFSForNumStrongConnect(Graph g, int numV, JRB post);
 Graph importFile(char *fileName, int typeGraph);
 void print2Dot(Graph g, char *fileName);
 
-int main(int argc, char const *argv[])
-{
-    /* code */
-    return 0;
-}
-
-
 Graph importFile(char *fileName, int typeGraph)
 {
     Graph g;
