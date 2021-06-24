@@ -334,7 +334,7 @@ int Top(Stack S)
 {
     if (!dll_empty(S))
     {
-        return jval_i(dll_first(S)->val);
+        return jval_i(dll_last(S)->val);
     }
     else
         return -1;
