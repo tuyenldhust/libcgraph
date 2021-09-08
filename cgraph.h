@@ -9,8 +9,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "jrb.h"
-#include "dllist.h"
+#include "libfdr/jrb.h"
+#include "libfdr/dllist.h"
 
 #define DIRECT_GRAPH 1
 #define UNDIRECT_GRAPH 0
