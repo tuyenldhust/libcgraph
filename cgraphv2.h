@@ -33,6 +33,7 @@ char *getVertex(Graph graph, int id);
 int addEdge(Graph graph, int v1, int v2, double weight);
 int hasEdge(Graph graph, int v1, int v2);
 double getEdgeValue(Graph graph, int v1, int v2);
+void changeEdgeValue(Graph g, int v1, int v2, double weight);
 int indegree(Graph graph, int v, int *output);
 int outdegree(Graph graph, int v, int *output);
 void dropGraph(Graph graph);
@@ -46,7 +47,6 @@ int DAG(Graph graph);
 void TSort(Graph g, int output[], int *n);
 void DFS(Graph g, int start);
 void BFS(Graph g, int start);
-
 
 Graph createGraph(int type)
 {
@@ -68,7 +68,7 @@ int numVertex(Graph g)
 	int numV = 0;
 	JRB ptr;
 	jrb_traverse(ptr, g.vertices)
-		numV++;
+			numV++;
 	return numV;
 }
 
@@ -128,49 +128,50 @@ int addEdge(Graph graph, int v1, int v2, double weight)
 		}
 		return 1;
 	}
-	else return 0;
+	else
+		return 0;
 }
 
 int delEdge(Graph g, int v1, int v2)
 {
-  JRB node, tree;
-  node = jrb_find_int(g.edges, v1);
-  if (node == NULL)
-  {
-    return 1;
-  }
-  else
-  {
-    tree = (JRB)jval_v(node->val);
-    JRB find = jrb_find_int(tree, v2);
-    if (find == NULL)
-      return 1;
-    else
-    {
-      jrb_delete_node(find);
-    }
-  }
+	JRB node, tree;
+	node = jrb_find_int(g.edges, v1);
+	if (node == NULL)
+	{
+		return 1;
+	}
+	else
+	{
+		tree = (JRB)jval_v(node->val);
+		JRB find = jrb_find_int(tree, v2);
+		if (find == NULL)
+			return 1;
+		else
+		{
+			jrb_delete_node(find);
+		}
+	}
 
-  if (g.type == UNDIRECT_GRAPH)
-  {
-    node = jrb_find_int(g.edges, v2);
-    if (node == NULL)
-    {
-      return 1;
-    }
-    else
-    {
-      tree = (JRB)jval_v(node->val);
-      JRB find = jrb_find_int(tree, v1);
-      if (find == NULL)
-        return 1;
-      else
-      {
-        jrb_delete_node(find);
-      }
-    }
-  }
-  return 0;
+	if (g.type == UNDIRECT_GRAPH)
+	{
+		node = jrb_find_int(g.edges, v2);
+		if (node == NULL)
+		{
+			return 1;
+		}
+		else
+		{
+			tree = (JRB)jval_v(node->val);
+			JRB find = jrb_find_int(tree, v1);
+			if (find == NULL)
+				return 1;
+			else
+			{
+				jrb_delete_node(find);
+			}
+		}
+	}
+	return 0;
 }
 
 int hasEdge(Graph graph, int v1, int v2)
@@ -202,6 +203,22 @@ double getEdgeValue(Graph graph, int v1, int v2)
 		return INFINITIVE_VALUE;
 	else
 		return jval_d(node->val);
+}
+
+void changeEdgeValue(Graph g, int v1, int v2, double weight)
+{
+	JRB node = jrb_find_int(g.edges, v1);
+	JRB tree = jval_v(node->val);
+	JRB find = jrb_find_int(tree, v2);
+	find->val = new_jval_d(weight);
+
+	if (g.type == UNDIRECT_GRAPH)
+	{
+		node = jrb_find_int(g.edges, v2);
+		tree = jval_v(node->val);
+		find = jrb_find_int(tree, v1);
+		find->val = new_jval_d(weight);
+	}
 }
 
 int indegree(Graph graph, int v, int *output)
@@ -401,7 +418,7 @@ int DAG(Graph graph)
 	int re, start;
 
 	jrb_traverse(vertex, graph.vertices)
-		jrb_insert_int(visited, jval_i(vertex->key), new_jval_i(0));
+			jrb_insert_int(visited, jval_i(vertex->key), new_jval_i(0));
 
 	jrb_traverse(vertex, graph.vertices)
 	{
