@@ -28,6 +28,7 @@ typedef Dllist Stack;
 Graph createGraph();
 int numVertex(Graph g);
 int addVertex(Graph graph, int id, char *name);
+int delEdge(Graph g, int v1, int v2);
 char *getVertex(Graph graph, int id);
 int addEdge(Graph graph, int v1, int v2, double weight);
 int hasEdge(Graph graph, int v1, int v2);
@@ -128,6 +129,48 @@ int addEdge(Graph graph, int v1, int v2, double weight)
 		return 1;
 	}
 	else return 0;
+}
+
+int delEdge(Graph g, int v1, int v2)
+{
+  JRB node, tree;
+  node = jrb_find_int(g.edges, v1);
+  if (node == NULL)
+  {
+    return 1;
+  }
+  else
+  {
+    tree = (JRB)jval_v(node->val);
+    JRB find = jrb_find_int(tree, v2);
+    if (find == NULL)
+      return 1;
+    else
+    {
+      jrb_delete_node(find);
+    }
+  }
+
+  if (g.type == UNDIRECT_GRAPH)
+  {
+    node = jrb_find_int(g.edges, v2);
+    if (node == NULL)
+    {
+      return 1;
+    }
+    else
+    {
+      tree = (JRB)jval_v(node->val);
+      JRB find = jrb_find_int(tree, v1);
+      if (find == NULL)
+        return 1;
+      else
+      {
+        jrb_delete_node(find);
+      }
+    }
+  }
+  return 0;
 }
 
 int hasEdge(Graph graph, int v1, int v2)
